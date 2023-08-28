@@ -1,0 +1,280 @@
+openapi: 3.0.2
+info:
+  description: |
+    Componenti OpenAPI interoperabilita' per eservices da esporre in PDND.
+  title: Componenti Comune di Bolzano
+  version: 1.0.0-SNAPSHOT
+components:
+  headers:
+    Cache-Control:
+      description: |-
+        Cache usage SHOULD be extensively detailed in the `description` property
+        to avoid data leaks or the usage of stale data.
+        This rule should ensure in some way that the api provider
+        documented extensively the cache usage to avoid data leaks
+        or usage of stale data.
+        For now this ruleset tests:
+        * the presence of following keywords
+          in the `description`: `max-age`, `private`, `no-store`, `no-cache`.
+        * that one and only one between Expires and Cache-Control is used.
+        `Cache-Control` and `Expires` should not be used in conjuction,
+        because `Cache-Control` overrides `Expires` when `max-age` is set.
+        Instead if neither `Cache-Control` or `Expires` are set, clients MAY use euristic cache
+        like described in RFC7234.
+      schema:
+        example: no-store
+        externalDocs:
+          url: https://datatracker.ietf.org/doc/html/rfc7234
+        pattern: '[a-zA-Z0-9=;" -]{,255}'
+        type: string
+    Retry-After:
+      description: |-
+        Retry contacting the endpoint *at least* after seconds.
+        See https://tools.ietf.org/html/rfc7231#section-7.1.3
+      schema:
+        format: int32
+        maximum: 186400
+        minimum: 0
+        type: integer
+    Sunset:
+      description: The Sunset HTTP response header field, indicates that a URI is
+        likely to become unresponsive at a specified point in the future.  It also
+        defines a sunset link relation type that allows linking to resources providing
+        information about an upcoming resource or service sunset.
+      schema:
+        example: Sun, 06 Nov 1994 08:49:37 GMT
+        externalDocs:
+          url: https://tools.ietf.org/html/rfc7231#appendix-D
+        format: HTTP-date
+        maxLength: 30
+        type: string
+    X-RateLimit-Limit:
+      description: The number of allowed requests in the current period
+      schema:
+        format: int32
+        maximum: 1000000
+        minimum: 0
+        type: integer
+    X-RateLimit-Remaining:
+      description: The number of remaining requests in the current period
+      schema:
+        format: int32
+        maximum: 1000000
+        minimum: 0
+        type: integer
+    X-RateLimit-Reset:
+      description: The number of seconds left in the current period
+      schema:
+        format: int32
+        maximum: 186400
+        minimum: 0
+        type: integer
+  responses:
+    400BadRequest:
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+      description: Bad Request
+    404NotFound:
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+      description: Not Found
+    429TooManyRequests:
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+      description: Too many requests
+    503ServiceUnavailable:
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+      description: Service Unavailable
+    default:
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+      description: Unexpected error
+  schemas:
+    Indirizzo:
+      properties:
+        comune:
+          description: https://w3id.org/italia/onto/CLV/City
+          maxLength: 128
+          type: string
+        stato:
+          description: https://w3id.org/italia/onto/CLV/Country
+          maxLength: 128
+          type: string
+        provincia:
+          description: https://w3id.org/italia/onto/CLV/Province
+          maxLength: 3
+          type: string
+        regione:
+          maxLength: 128
+          type: string
+        cap:
+          maxLength: 6
+          type: string
+      required:
+      - comune
+      - provincia
+      - stato
+      type: object
+      x-jsonld-context:
+        '@vocab': https://w3id.org/italia/onto/CLV/
+        city: hasCity
+        country:
+          '@context':
+            '@base': http://publications.europa.eu/resource/authority/country/
+          '@id': hasCountry
+          '@type': '@id'
+        province:
+          '@context':
+            '@base': https://w3id.org/italia/data/identifiers/provinces-identifiers/vehicle-code/
+          '@id': hasProvince
+          '@type': '@id'
+        region:
+          '@context':
+            '@base': https://w3id.org/italia/controlled-vocabulary/territorial-classifications/regions/
+          '@id': hasRegion
+          '@type': '@id'
+        zip_code: postCode
+      x-jsonld-type: https://w3id.org/italia/onto/Address
+    Coordinates:
+      description: |-    
+        Coordinate geografiche di un punto. I nomi "lat" e "long" sono ereditati da clvapit.
+        Example URL: http://dati.beniculturali.it/lodview/mibact/luoghi/resource/Geometry/Coordinate_geografiche_della_sede_di_Gallerie_degli_Uffizi_-_Corridoio_Vasariano_20440.html
+      properties:
+        lat:
+          $ref: '#/components/schemas/Latitudine'
+        long:
+          $ref: '#/components/schemas/Longitudine'
+      required:
+      - lat
+      - long
+    Latitudine:
+      description: |-
+        Latitudine di un punto espresso in :
+
+        * sistema ETRS89 per Italia ed Europa
+        * e sistema WGS84 per gli altri paesi.
+      example: 45.492599
+      externalDocs:
+        url: http://dati.gov.it/onto/clvapit#long
+      format: double
+      maximum: 90
+      minimum: -90
+      type: number
+    LatitudineString:
+      description: |-
+        Latitudine di un punto espresso in :
+
+        * sistema ETRS89 per Italia ed Europa
+        * e sistema WGS84 per gli altri paesi.
+
+        Il valore é serializzato in stringa.
+
+        Il valore stringa è al sicuro da errori aritmetici in virgola mobile
+      example: '45.492599412312331'
+      type: string
+    Longitudine:
+      description: |-
+        Longitudine di un punto espresso n:
+
+        * sistema ETRS89 per Italia ed Europa
+        * e sistema WGS84 per gli altri paesi.
+      example: 9.19289
+      externalDocs:
+        url: http://dati.gov.it/onto/clvapit#long
+      format: double
+      maximum: 180
+      minimum: -180
+      type: number
+    LongitudineString:
+      description: |-
+        Longitudine di un punto espresso n:
+
+        * sistema ETRS89 per Italia ed Europa
+        * e sistema WGS84 per gli altri paesi.
+
+        Il valore é serializzato in stringa.
+
+        Il valore stringa è al sicuro da errori aritmetici in virgola mobile
+      example: '9.192894141231231'
+      type: string
+    Problem:
+      additionalProperties: false
+      description: |-
+        This schema describes RFC7807 Problem Details for HTTP APIs.
+        The specification is intentionally flexible, and allows to adapt
+        the schema adding further properties, or not enforcing any of the properties
+        below.
+
+        To make this schema safe by default, additionalProperties are forbidden though.
+        In case you need them, you can either re-define Problem or extend it
+        using `allOf`.
+      properties:
+        detail:
+          description: |
+            A human readable explanation specific to this occurrence of the
+            problem. You MUST NOT expose internal informations, personal
+            data or implementation details through this field.
+
+            `detail` supports localized patterns whereas `title` pattern is only in ascii.
+          example: Request took too long to complete.
+          maxLength: 4096
+          pattern: ^.{0,1024}$
+          type: string
+        instance:
+          description: |
+            An absolute URI that identifies the specific occurrence of the problem.
+            It may or may not yield further information if dereferenced.
+          format: uri
+          example: https://example.net/account/12345/msgs/abc
+          maxLength: 2048
+          type: string
+        status:
+          description: |
+            The HTTP status code generated by the origin server for this occurrence
+            of the problem.
+          example: 503
+          exclusiveMaximum: true
+          format: int32
+          maximum: 600
+          minimum: 100
+          type: integer
+        title:
+          description: |
+            A short, summary of the problem type. Written in english and readable
+            for engineers (usually not suited for non technical stakeholders and
+            not localized): the expressed pattern does not support unicode characters.
+          example: Service Unavailable
+          maxLength: 64
+          pattern: ^[ -~]{0,64}$
+          type: string
+        type:
+          default: about:blank
+          description: |
+            An absolute URI that identifies the problem type.  When dereferenced,
+            it SHOULD provide human-readable documentation for the problem type
+            (e.g., using HTML).
+          example: https://tools.ietf.org/html/rfc7231#section-6.6.4
+          format: uri
+          maxLength: 2048
+          type: string
+      type: object
+    CodiceFiscale:
+      description: Il codice fiscale.
+      example: RSSMRA75L01H501A
+      externalDocs:
+        url: https://w3id.org/italia/onto/CPV/taxCode
+      maxLength: 16
+      minLength: 11
+      pattern: /^(?:(?:[B-DF-HJ-NP-TV-Z]|[AEIOU])[AEIOU][AEIOUX]|[B-DF-HJ-NP-TV-Z]{2}[A-Z]){2}[\dLMNP-V]{2}(?:[A-EHLMPR-T](?:[04LQ][1-9MNP-V]|[1256LMRS][\dLMNP-V])|[DHPS][37PT][0L]|[ACELMRT][37PT][01LM])(?:[A-MZ][1-9MNP-V][\dLMNP-V]{2}|[A-M][0L](?:[1-9MNP-V][\dLMNP-V]|[0L][1-9MNP-V]))[A-Z]$/i
+      type: string
